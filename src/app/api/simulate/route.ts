@@ -41,6 +41,7 @@ RULES:
 - Generate 2-3 chapters per response, then ALWAYS present a choice
 - Choices should have real consequences and be specific/dramatic
 - Use a VARIETY of simulation types — mix notifications, posts, AI conversations, news alerts
+- The profile data includes REAL co-founders, team members, and company details — USE THEM. Do NOT invent co-founder names. If the data says "Co-founders: X and Y", use those exact names.
 - CRITICAL: You MUST use tools. Every response must consist ONLY of tool calls. Do NOT write any plain text. Start with showChapter immediately. ALWAYS end with showChoice.`;
 
 export async function POST(req: Request) {
