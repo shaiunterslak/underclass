@@ -71,7 +71,10 @@ GAME ENDING:
 
 export async function POST(req: Request) {
   try {
-  const { messages: uiMessages } = await req.json();
+  const url = new URL(req.url);
+  const body = await req.json();
+  const { messages: uiMessages } = body;
+  const clientModel = body.model; // "basic" or undefined
   const modelMessages = await convertToModelMessages(uiMessages);
 
   // Extract profile data from user messages
@@ -103,8 +106,12 @@ export async function POST(req: Request) {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const systemPrompt = `${BASE_PROMPT}\n\nTODAY'S DATE: ${today}\nThe simulation STARTS TODAY. Begin the narrative from this exact date and advance forward.\n\nAVAILABLE SIMULATION TYPES:\n${simulationPrompts}\n\nProfile data: ${profileData}`;
 
+  // Support cheaper model — passed from client body or query param
+  const useBasicModel = clientModel === "basic" || url.searchParams.get("model") === "basic";
+  const modelId = useBasicModel ? "claude-haiku-3.5-20241022" : "claude-sonnet-4-20250514";
+
   const result = streamText({
-    model: anthropic("claude-sonnet-4-20250514"),
+    model: anthropic(modelId),
     system: systemPrompt,
     messages: modelMessages,
     toolChoice: "auto",

@@ -45,6 +45,7 @@ function SimulationContent() {
   const [selectedChoices, setSelectedChoices] = useState<Map<string, string>>(new Map());
   const [showPaywall, setShowPaywall] = useState(false);
   const [hasPaid, setHasPaid] = useState(false);
+  const [useBasicModel, setUseBasicModel] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasStartedRef = useRef(false);
   const profileRef = useRef("");
@@ -58,6 +59,15 @@ function SimulationContent() {
   });
 
   const isStreaming = status === "streaming" || status === "submitted";
+
+  // Sync model choice to transport body
+  useEffect(() => {
+    if (useBasicModel) {
+      (transportRef.current as any).body = { model: "basic" };
+    } else {
+      (transportRef.current as any).body = undefined;
+    }
+  }, [useBasicModel]);
 
   // Check if already paid (localStorage or URL param from Stripe redirect)
   useEffect(() => {
@@ -349,7 +359,7 @@ function SimulationContent() {
       // Paywall check
       if (!hasPaid) {
         const chapters = countChapters();
-        if (chapters >= 4) {
+        if (chapters >= 3) {
           setShowPaywall(true);
           return;
         }
@@ -415,7 +425,7 @@ function SimulationContent() {
 
     if (lastToolName === "showChoice") {
       // Check paywall before allowing choice
-      if (!hasPaid && countChapters() >= 4) {
+      if (!hasPaid && countChapters() >= 3) {
         setShowPaywall(true);
         return;
       }
@@ -429,7 +439,7 @@ function SimulationContent() {
     }
 
     // Paywall check on auto-continue too
-    if (!hasPaid && countChapters() >= 4) {
+    if (!hasPaid && countChapters() >= 3) {
       setShowPaywall(true);
       return;
     }
@@ -918,6 +928,11 @@ function SimulationContent() {
           personName={personName}
           onPaymentComplete={() => {
             setHasPaid(true);
+            setShowPaywall(false);
+          }}
+          onContinueFree={() => {
+            setUseBasicModel(true);
+            setHasPaid(true); // Don't show paywall again
             setShowPaywall(false);
           }}
         />
