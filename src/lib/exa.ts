@@ -529,6 +529,29 @@ export async function findPersonByHandle(handle: string): Promise<PersonProfile>
       }
     }
     
+    // If Exa Answer didn't give us a name, try finding their profile on aggregator sites
+    if (!personName) {
+      console.log(`[exa] Exa Answer didn't identify anyone, trying web search for @${xHandle}`);
+      const webResults = await exaSearch(apiKey, {
+        query: `"${xHandle}" twitter profile`,
+        type: "auto",
+        numResults: 5,
+        contents: { text: { maxCharacters: 500 } },
+      });
+      
+      // Look for real name patterns in results (e.g. "Farza Majeed" from medium/@farzatv)
+      for (const r of webResults) {
+        const text = `${r.title || ""} ${r.text || ""}`;
+        // Try to find LinkedIn URL in any result
+        const liMatch = text.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/);
+        if (liMatch) {
+          const liUrl = `https://www.linkedin.com/in/${liMatch[1]}`;
+          console.log(`[exa] Found LinkedIn in web results: ${liUrl}`);
+          return researchPerson(liUrl);
+        }
+      }
+    }
+    
     // LinkedIn URL missing or wrong — search by name + company
     if (personName) {
       const searchQuery = companyName ? `${personName} ${companyName}` : personName;
