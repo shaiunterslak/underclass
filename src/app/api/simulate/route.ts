@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     messages: modelMessages,
     toolChoice: "required",
     tools: aiTools,
-    maxTokens: 16000,
+    maxOutputTokens: 16000,
     stopWhen: stepCountIs(80),
   });
 

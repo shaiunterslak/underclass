@@ -29,6 +29,7 @@ function SimulationContent() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
+  const [appliedNotes, setAppliedNotes] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasStartedRef = useRef(false);
   const profileRef = useRef("");
@@ -139,6 +140,9 @@ function SimulationContent() {
     (choice: string) => {
       setChoiceDisabled(true);
       const notes = settings.userNotes ? `\n\nUSER DIRECTION: ${settings.userNotes}` : "";
+      if (settings.userNotes) {
+        setAppliedNotes((prev) => [...prev, settings.userNotes]);
+      }
       sendMessage({
         text: `I chose: "${choice}". Continue the simulation from where we left off — advance the timeline, show consequences of this choice, then present another choice after 2-3 chapters. Use varied simulation types!${notes}\n\nPROFILE DATA:\n${profileRef.current}`,
       });
@@ -418,7 +422,32 @@ function SimulationContent() {
 
                 // Second pass: render everything
                 let idx = 0;
+                let noteIdx = 0;
                 messages.forEach((message, messageIndex) => {
+                  // Render user steering notes in the timeline
+                  if (message.role === "user" && messageIndex > 0) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const text = (message as any).content || (message.parts || []).map((p: any) => p.text || "").join("");
+                    const dirMatch = typeof text === "string" ? text.match(/USER DIRECTION: (.+?)(\n|$)/) : null;
+                    if (dirMatch) {
+                      elements.push(
+                        <motion.div
+                          key={`note-${messageIndex}`}
+                          className="flex items-center gap-2 my-3 mx-auto max-w-md"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                        >
+                          <div className="flex-1 h-px bg-white/5" />
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                            <span className="text-[10px] text-white/25">🎯</span>
+                            <span className="text-[11px] text-white/30 italic">{dirMatch[1]}</span>
+                          </div>
+                          <div className="flex-1 h-px bg-white/5" />
+                        </motion.div>
+                      );
+                    }
+                    return;
+                  }
                   if (message.role !== "assistant") return;
                   (message.parts || []).forEach((part, partIndex) => {
                     const currentIdx = idx++;
