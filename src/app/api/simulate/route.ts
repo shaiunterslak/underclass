@@ -108,7 +108,7 @@ export async function POST(req: Request) {
 
   // Support cheaper model — passed from client body or query param
   const useBasicModel = clientModel === "basic" || url.searchParams.get("model") === "basic";
-  const modelId = useBasicModel ? "claude-haiku-3.5-20241022" : "claude-sonnet-4-20250514";
+  const modelId = useBasicModel ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-20250514";
 
   const result = streamText({
     model: anthropic(modelId),
