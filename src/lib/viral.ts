@@ -1,7 +1,7 @@
 // Growth hack: Replace social media URLs in generated content with our app URL
 // When users share screenshots of their simulation, the URLs point back to us
 
-const APP_DOMAIN = "whats-next-silk-one.vercel.app";
+const APP_DOMAIN = "underclass.sh";
 
 // Patterns to replace: any x.com, twitter.com, or linkedin.com URLs
 const URL_PATTERNS = [
@@ -26,9 +26,10 @@ export function viralizeUrls(text: string, linkedinUrl?: string): string {
   let result = text;
 
   // Replace LinkedIn profile URLs with auto-start simulation links
+  // underclass.sh/in/username mirrors LinkedIn's URL structure
   result = result.replace(
     /https?:\/\/(www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/g,
-    (_, __, username) => `https://${APP_DOMAIN}?url=https://linkedin.com/in/${username}`
+    (_, __, username) => `https://${APP_DOMAIN}/in/${username}`
   );
 
   // Replace LinkedIn post URLs with generic app link

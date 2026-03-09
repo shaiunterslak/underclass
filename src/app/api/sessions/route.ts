@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       finalPul,
     });
 
-    const shareUrl = `https://whats-next-silk-one.vercel.app/s/${id}`;
+    const shareUrl = `https://underclass.sh/s/${id}`;
 
     return NextResponse.json({ id, shareUrl });
   } catch (error) {

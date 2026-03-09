@@ -7,7 +7,7 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const APP_URL = "https://whats-next-silk-one.vercel.app";
+const APP_URL = "https://underclass.sh";
 
 export const metadata: Metadata = {
   title: "underclass — will you survive the age of AI?",
