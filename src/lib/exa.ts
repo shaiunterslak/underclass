@@ -478,8 +478,11 @@ export async function findPersonByHandle(handle: string): Promise<PersonProfile>
   if (!apiKey) throw new Error("EXA_API_KEY not set");
 
   // Detect X/Twitter handle or URL → use Exa Answer to find their LinkedIn
+  // Also treat single-word handles that look like usernames (camelCase, no spaces) as potential X handles
+  const looksLikeUsername = !handle.includes(" ") && !handle.includes("-") && /[A-Z]/.test(handle) && handle.length > 3;
   const xHandleMatch = handle.match(/(?:x\.com|twitter\.com)\/([^/?]+)/) || 
-    (handle.startsWith("@") ? [null, handle.slice(1)] : null);
+    (handle.startsWith("@") ? [null, handle.slice(1)] : null) ||
+    (looksLikeUsername ? [null, handle] : null);
   
   if (xHandleMatch) {
     const xHandle = xHandleMatch[1];
