@@ -295,40 +295,12 @@ function SimulationContent() {
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.5 }}
               >
-                {/* Animated scanner ring */}
-                <div className="relative w-24 h-24">
-                  <motion.div
-                    className="absolute inset-0 rounded-full border border-cyan-400/20"
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                  />
-                  <motion.div
-                    className="absolute inset-2 rounded-full border border-cyan-400/30"
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.3 }}
-                  />
-                  <div className="absolute inset-4 rounded-full border-2 border-white/10" />
-                  <motion.div
-                    className="absolute inset-4 rounded-full border-2 border-t-cyan-400/70 border-r-transparent border-b-transparent border-l-transparent"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                  />
-                  {/* Center dot */}
-                  <motion.div
-                    className="absolute inset-0 flex items-center justify-center"
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <div className="w-2 h-2 rounded-full bg-cyan-400/60" />
-                  </motion.div>
-                </div>
-
-                {/* Status text with shimmer */}
+                {/* Status text */}
                 <div className="text-center">
-                  <Shimmer as="p" className="text-lg font-medium mb-2" duration={2.5}>
+                  <Shimmer as="p" className="text-lg font-medium mb-3" duration={2.5}>
                     {researchStatus}
                   </Shimmer>
-                  <p className="text-white/25 text-sm max-w-sm mx-auto">
+                  <p className="text-white/20 text-sm max-w-xs mx-auto leading-relaxed">
                     Analyzing career trajectory and modeling AI disruption scenarios
                   </p>
                 </div>
