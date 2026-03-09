@@ -60,9 +60,30 @@ function SimulationContent() {
     if ((!url && !handle) || hasStartedRef.current) return;
     hasStartedRef.current = true;
 
+    const loadingMessages = [
+      "Looking up profile...",
+      "Seeing if you're cooked...",
+      "Checking your LinkedIn...",
+      "Calculating future earnings...",
+      "Asking AI if you'll make it...",
+      "Scanning for red flags...",
+      "Evaluating your vibe...",
+      "Cross-referencing with the algorithm...",
+      "Running the simulation...",
+      "Determining underclass probability...",
+    ];
+
     const research = async () => {
       try {
-        setResearchStatus(handle ? `Searching for ${handle}...` : "Looking up profile...");
+        setResearchStatus(handle ? `Searching for ${handle}...` : loadingMessages[0]);
+
+        // Cycle through loading messages
+        let msgIdx = 1;
+        const msgInterval = setInterval(() => {
+          setResearchStatus(loadingMessages[msgIdx % loadingMessages.length]);
+          msgIdx++;
+        }, 2500);
+
         const body = handle ? { handle } : { url };
         const res = await fetch("/api/research", {
           method: "POST",
@@ -70,6 +91,7 @@ function SimulationContent() {
           body: JSON.stringify(body),
         });
         const data = await res.json();
+        clearInterval(msgInterval);
         setPersonName(data.name || "");
         const profileStr = JSON.stringify(data, null, 2);
         profileRef.current = profileStr;
