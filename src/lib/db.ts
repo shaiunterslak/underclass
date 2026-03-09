@@ -1,8 +1,8 @@
 import { neon } from "@neondatabase/serverless";
 
 function getDb() {
-  const url = process.env.POSTGRES_URL;
-  if (!url) throw new Error("POSTGRES_URL not set");
+  const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (!url) throw new Error("POSTGRES_URL or DATABASE_URL not set");
   return neon(url);
 }
 

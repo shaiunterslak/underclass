@@ -4,7 +4,7 @@ import { createSession, getSession, initDb } from "@/lib/db";
 // POST — save a session
 export async function POST(req: Request) {
   try {
-    if (!process.env.POSTGRES_URL) {
+    if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 // GET — load a session
 export async function GET(req: Request) {
   try {
-    if (!process.env.POSTGRES_URL) {
+    if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
