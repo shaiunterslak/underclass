@@ -20,8 +20,12 @@ function getOutcomeInfo(pul: number | null) {
 function Marquee({ sessions }: { sessions: RecentSession[] }) {
   if (sessions.length === 0) return null;
 
-  // Double the items for seamless loop
-  const items = [...sessions, ...sessions];
+  // Repeat list enough to fill viewport, then double for seamless scroll
+  const minItems = Math.max(2, Math.ceil(20 / sessions.length));
+  const baseItems: RecentSession[] = [];
+  for (let i = 0; i < minItems; i++) baseItems.push(...sessions);
+  // Double for seamless loop (scroll first half, then reset)
+  const items = [...baseItems, ...baseItems];
 
   return (
     <div className="w-full overflow-hidden mt-10 max-w-4xl mx-auto mask-fade">
@@ -29,7 +33,7 @@ function Marquee({ sessions }: { sessions: RecentSession[] }) {
         className="flex gap-3 w-max"
         animate={{ x: ["0%", "-50%"] }}
         transition={{
-          duration: sessions.length * 3,
+          duration: baseItems.length * 2.5,
           ease: "linear",
           repeat: Infinity,
         }}
