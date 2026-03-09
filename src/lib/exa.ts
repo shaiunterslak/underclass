@@ -69,6 +69,70 @@ async function exaAnswer(apiKey: string, query: string): Promise<string> {
   }
 }
 
+export interface PersonCandidate {
+  name: string;
+  headline: string;
+  location: string;
+  profileImageUrl: string;
+  linkedinUrl: string;
+}
+
+export async function findCandidates(linkedinUrl: string): Promise<PersonCandidate[]> {
+  const apiKey = process.env.EXA_API_KEY;
+  if (!apiKey) return [];
+
+  const cleanUrl = linkedinUrl.replace(/\/$/, "");
+  const slug = cleanUrl.split("/in/")[1]?.replace(/\//g, "") || "";
+  const nameFromUrl = slug
+    .replace(/-/g, " ")
+    .replace(/\d+/g, "")
+    .trim()
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+  // Search for the exact URL + name-based search
+  const results = await exaSearch(apiKey, {
+    query: `${nameFromUrl} linkedin`,
+    category: "people",
+    type: "auto",
+    numResults: 5,
+    contents: { text: { maxCharacters: 500 } },
+  });
+
+  // Also try exact URL search
+  const urlResults = await exaSearch(apiKey, {
+    query: cleanUrl,
+    type: "auto",
+    numResults: 3,
+    contents: { text: { maxCharacters: 500 } },
+  });
+
+  const allResults = [...urlResults, ...results];
+  const seen = new Set<string>();
+  const candidates: PersonCandidate[] = [];
+
+  for (const r of allResults) {
+    const url = r.url || "";
+    const rSlug = url.split("/in/")[1]?.replace(/\//g, "") || url;
+    if (seen.has(rSlug) || !r.title) continue;
+    seen.add(rSlug);
+
+    const entity = r.entities?.[0];
+    const props = entity?.properties || {};
+
+    candidates.push({
+      name: props.name || r.title?.split(/[|–-]/)[0]?.trim() || "",
+      headline: r.title || "",
+      location: props.location || "",
+      profileImageUrl: r.image || props.imageUrl || props.image || "",
+      linkedinUrl: url.includes("linkedin.com") ? url : "",
+    });
+  }
+
+  return candidates.slice(0, 5);
+}
+
 export async function researchPerson(linkedinUrl: string): Promise<PersonProfile> {
   const apiKey = process.env.EXA_API_KEY;
   if (!apiKey) throw new Error("EXA_API_KEY not set");
@@ -92,7 +156,15 @@ export async function researchPerson(linkedinUrl: string): Promise<PersonProfile
   const companies: CompanyInfo[] = [];
   const sources: string[] = [];
 
-  // ── Step 1: People search — structured entity data ──────────
+  // ── Step 1: Exact URL search first ──────────
+  const urlResults = await exaSearch(apiKey, {
+    query: cleanUrl,
+    type: "auto",
+    numResults: 3,
+    contents: { text: { maxCharacters: 2000 } },
+  });
+
+  // ── Step 2: People search — structured entity data ──────────
   const peopleResults = await exaSearch(apiKey, {
     query: `${nameFromUrl} ${cleanUrl}`,
     category: "people",
@@ -101,8 +173,11 @@ export async function researchPerson(linkedinUrl: string): Promise<PersonProfile
     contents: { text: { maxCharacters: 2000 } },
   });
 
-  const match =
-    peopleResults.find((r) => r.url?.includes("linkedin.com") && (r.url?.includes(slug) || cleanUrl.includes(slug))) ||
+  // Prefer exact URL match, then slug match, then first result
+  const allResults = [...urlResults, ...peopleResults];
+  const exactMatch = allResults.find((r) => r.url?.includes(`/in/${slug}`));
+  const match = exactMatch ||
+    allResults.find((r) => r.url?.includes("linkedin.com") && r.url?.includes(slug)) ||
     peopleResults[0];
 
   if (match) {

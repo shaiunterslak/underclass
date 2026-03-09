@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
-import { researchPerson, findPersonByHandle } from "@/lib/exa";
+import { researchPerson, findPersonByHandle, findCandidates } from "@/lib/exa";
 
 export async function POST(req: Request) {
   try {
-    const { url, handle } = await req.json();
+    const { url, handle, candidates: wantCandidates } = await req.json();
 
     if (!url && !handle) {
       return NextResponse.json({ error: "URL or handle is required" }, { status: 400 });
+    }
+
+    // Candidates mode: return multiple options for disambiguation
+    if (wantCandidates) {
+      const linkedinUrl = url || `https://www.linkedin.com/in/${handle}`;
+      const results = await findCandidates(linkedinUrl);
+      return NextResponse.json({ candidates: results });
     }
 
     // If we have a direct LinkedIn URL, use it

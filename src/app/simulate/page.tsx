@@ -28,6 +28,9 @@ function SimulationContent() {
   const [choiceDisabled, setChoiceDisabled] = useState(false);
   const [personName, setPersonName] = useState("");
   const [profileImage, setProfileImage] = useState("");
+  const [candidates, setCandidates] = useState<Array<{
+    name: string; headline: string; location: string; profileImageUrl: string; linkedinUrl: string;
+  }> | null>(null);
   const [settings, setSettings] = useState<SimulationSettings>(DEFAULT_SETTINGS);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -99,6 +102,51 @@ function SimulationContent() {
     }
   }, [messages]);
 
+  // Start simulation with a researched profile
+  const startSimulation = useCallback((data: { name?: string; profileImageUrl?: string }) => {
+    setPersonName(data.name || "");
+    setProfileImage((data as Record<string, string>).profileImageUrl || "");
+    setCandidates(null);
+
+    if (posthog.__loaded) {
+      posthog.capture("simulation_started", {
+        person_name: data.name,
+        linkedin_url: url || undefined,
+        handle: handle || undefined,
+      });
+    }
+    const profileStr = JSON.stringify(data, null, 2);
+    profileRef.current = profileStr;
+
+    setResearchStatus("Simulating your future...");
+    setTimeout(() => {
+      setIsResearching(false);
+      sendMessage({
+        text: `Generate the first chapters of my future simulation. Use a variety of simulation types — tweets, iMessages, Slack, LinkedIn, news alerts, AI conversations. Mix it up!\n\nPROFILE DATA:\n${profileStr}`,
+      });
+    }, 600);
+  }, [url, handle, sendMessage]);
+
+  // Pick a candidate from disambiguation
+  const handlePickCandidate = useCallback(async (candidate: { name: string; linkedinUrl: string }) => {
+    setCandidates(null);
+    setIsResearching(true);
+    setResearchStatus(`Researching ${candidate.name}...`);
+
+    try {
+      const targetUrl = candidate.linkedinUrl || url;
+      const res = await fetch("/api/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: targetUrl }),
+      });
+      const data = await res.json();
+      startSimulation(data);
+    } catch {
+      setResearchStatus("Research failed. Try again.");
+    }
+  }, [url, startSimulation]);
+
   // Research the person and start simulation
   useEffect(() => {
     if ((!url && !handle) || hasStartedRef.current) return;
@@ -128,6 +176,27 @@ function SimulationContent() {
           msgIdx++;
         }, 2500);
 
+        // First, get candidates for disambiguation
+        const candidateBody = handle
+          ? { handle, candidates: true }
+          : { url, candidates: true };
+        const candidateRes = await fetch("/api/research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(candidateBody),
+        });
+        const candidateData = await candidateRes.json();
+        const foundCandidates = candidateData.candidates || [];
+
+        // If we have multiple candidates with different names, let user pick
+        const uniqueNames = new Set(foundCandidates.map((c: { name: string }) => c.name.toLowerCase()));
+        if (foundCandidates.length > 1 && uniqueNames.size > 1) {
+          clearInterval(msgInterval);
+          setCandidates(foundCandidates.slice(0, 3));
+          return; // Wait for user to pick
+        }
+
+        // Single clear match — proceed with full research
         const body = handle ? { handle } : { url };
         const res = await fetch("/api/research", {
           method: "POST",
@@ -136,34 +205,14 @@ function SimulationContent() {
         });
         const data = await res.json();
         clearInterval(msgInterval);
-        setPersonName(data.name || "");
-        setProfileImage(data.profileImageUrl || "");
-
-        // Track simulation start
-        if (posthog.__loaded) {
-          posthog.capture("simulation_started", {
-            person_name: data.name,
-            linkedin_url: url || undefined,
-            handle: handle || undefined,
-          });
-        }
-        const profileStr = JSON.stringify(data, null, 2);
-        profileRef.current = profileStr;
-
-        setResearchStatus("Simulating your future...");
-        await new Promise((r) => setTimeout(r, 600));
-        setIsResearching(false);
-
-        sendMessage({
-          text: `Generate the first chapters of my future simulation. Use a variety of simulation types — tweets, iMessages, Slack, LinkedIn, news alerts, AI conversations. Mix it up!\n\nPROFILE DATA:\n${profileStr}`,
-        });
+        startSimulation(data);
       } catch {
         setResearchStatus("Could not research this profile. Try another URL.");
       }
     };
 
     research();
-  }, [url, sendMessage]);
+  }, [url, handle, sendMessage, startSimulation]);
 
   const handleShare = useCallback(async () => {
     if (isSaving || shareUrl) return;
@@ -477,7 +526,56 @@ function SimulationContent() {
             )}
           </AnimatePresence>
 
-          {!isResearching && (
+          {/* Candidate disambiguation */}
+          {candidates && candidates.length > 0 && (
+            <motion.div
+              className="flex flex-col items-center justify-center min-h-[80vh] gap-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="text-center mb-2">
+                <h2 className="text-xl font-semibold text-white/80 mb-1">Which one is you?</h2>
+                <p className="text-sm text-white/30">We found a few matches</p>
+              </div>
+              <div className="flex flex-col gap-3 w-full max-w-md">
+                {candidates.map((c, i) => (
+                  <motion.button
+                    key={c.linkedinUrl || i}
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/15 transition-all cursor-pointer text-left"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * i }}
+                    onClick={() => handlePickCandidate(c)}
+                  >
+                    {c.profileImageUrl ? (
+                      <img
+                        src={c.profileImageUrl}
+                        alt={c.name}
+                        className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-white/10 border border-white/5 flex items-center justify-center text-white/40 font-bold shrink-0">
+                        {c.name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white/80 truncate">{c.name}</p>
+                      <p className="text-xs text-white/30 truncate">{c.headline}</p>
+                      {c.location && <p className="text-[11px] text-white/20 mt-0.5">{c.location}</p>}
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+              <a
+                href="/"
+                className="text-xs text-white/20 hover:text-white/40 transition-colors mt-4"
+              >
+                ← Try a different search
+              </a>
+            </motion.div>
+          )}
+
+          {!isResearching && !candidates && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
