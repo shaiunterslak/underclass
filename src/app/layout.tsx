@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "underclass",
     images: [
       {
-        url: `${APP_URL}/api/og`,
+        url: `${APP_URL}/og-image.png`,
         width: 1200,
         height: 630,
         alt: "underclass — will you survive the age of AI?",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     title: "underclass — will you survive the age of AI?",
     description:
       "AI simulates the next 50 years of your career. Find out your Permanent Underclass Likelihood score.",
-    images: [`${APP_URL}/api/og`],
+    images: [`${APP_URL}/og-image.png`],
   },
   icons: {
     icon: [
