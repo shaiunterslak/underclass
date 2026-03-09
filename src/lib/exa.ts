@@ -91,32 +91,33 @@ export async function findCandidates(linkedinUrl: string): Promise<PersonCandida
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
-  // Search for the exact URL + name-based search
-  const results = await exaSearch(apiKey, {
-    query: `${nameFromUrl} linkedin`,
-    category: "people",
-    type: "auto",
-    numResults: 5,
-    contents: { text: { maxCharacters: 500 } },
-  });
+  // Two parallel searches: exact URL + people category
+  const [urlResults, peopleResults] = await Promise.all([
+    exaSearch(apiKey, {
+      query: cleanUrl,
+      type: "auto",
+      numResults: 3,
+      contents: { text: { maxCharacters: 500 } },
+    }),
+    exaSearch(apiKey, {
+      query: `${nameFromUrl} linkedin`,
+      category: "people",
+      type: "auto",
+      numResults: 5,
+      contents: { text: { maxCharacters: 500 } },
+    }),
+  ]);
 
-  // Also try exact URL search
-  const urlResults = await exaSearch(apiKey, {
-    query: cleanUrl,
-    type: "auto",
-    numResults: 3,
-    contents: { text: { maxCharacters: 500 } },
-  });
-
-  const allResults = [...urlResults, ...results];
   const seen = new Set<string>();
   const candidates: PersonCandidate[] = [];
 
-  for (const r of allResults) {
+  const addCandidate = (r: ExaResult) => {
     const url = r.url || "";
-    const rSlug = url.split("/in/")[1]?.replace(/\//g, "") || url;
-    if (seen.has(rSlug) || !r.title) continue;
-    seen.add(rSlug);
+    // Only include LinkedIn profile URLs, not posts
+    if (!url.includes("linkedin.com/in/")) return;
+    const rSlug = url.split("/in/")[1]?.replace(/[/?#].*/g, "").replace(/\//g, "") || "";
+    if (!rSlug || seen.has(rSlug.toLowerCase()) || !r.title) return;
+    seen.add(rSlug.toLowerCase());
 
     const entity = r.entities?.[0];
     const props = entity?.properties || {};
@@ -126,9 +127,23 @@ export async function findCandidates(linkedinUrl: string): Promise<PersonCandida
       headline: r.title || "",
       location: props.location || "",
       profileImageUrl: r.image || props.imageUrl || props.image || "",
-      linkedinUrl: url.includes("linkedin.com") ? url : "",
+      linkedinUrl: url,
     });
-  }
+  };
+
+  // Priority 1: Exact slug match from either search
+  const allResults = [...urlResults, ...peopleResults];
+  const exactMatch = allResults.find((r) => {
+    const rSlug = (r.url || "").split("/in/")[1]?.replace(/[/?#].*/g, "").replace(/\//g, "") || "";
+    return rSlug.toLowerCase() === slug.toLowerCase();
+  });
+  if (exactMatch) addCandidate(exactMatch);
+
+  // Priority 2: Other URL search results (LinkedIn profiles only)
+  for (const r of urlResults) addCandidate(r);
+
+  // Priority 3: People search results
+  for (const r of peopleResults) addCandidate(r);
 
   return candidates.slice(0, 5);
 }

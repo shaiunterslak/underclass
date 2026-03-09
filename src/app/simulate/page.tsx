@@ -195,13 +195,22 @@ function SimulationContent() {
         const candidateData = await candidateRes.json();
         const foundCandidates = candidateData.candidates || [];
 
-        // If we have multiple candidates with different names, let user pick
-        const uniqueNames = new Set(foundCandidates.map((c: { name: string }) => c.name.toLowerCase()));
-        if (foundCandidates.length > 1 && uniqueNames.size > 1) {
-          clearInterval(msgInterval);
-          setIsResearching(false);
-          setCandidates(foundCandidates.slice(0, 3));
-          return; // Wait for user to pick
+        // Check if the first candidate is an exact slug match
+        const inputSlug = (url || `https://www.linkedin.com/in/${handle}`)
+          .split("/in/")[1]?.replace(/[/?#].*/g, "").replace(/\//g, "") || "";
+        const firstSlug = (foundCandidates[0]?.linkedinUrl || "")
+          .split("/in/")[1]?.replace(/[/?#].*/g, "").replace(/\//g, "") || "";
+        const hasExactMatch = inputSlug && firstSlug && inputSlug.toLowerCase() === firstSlug.toLowerCase();
+
+        // If exact match, skip disambiguation. If multiple different people, let user pick.
+        if (!hasExactMatch && foundCandidates.length > 1) {
+          const uniqueNames = new Set(foundCandidates.map((c: { name: string }) => c.name.toLowerCase()));
+          if (uniqueNames.size > 1) {
+            clearInterval(msgInterval);
+            setIsResearching(false);
+            setCandidates(foundCandidates.slice(0, 3));
+            return; // Wait for user to pick
+          }
         }
 
         // Single clear match — proceed with full research
