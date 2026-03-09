@@ -187,7 +187,7 @@ function SimulationContent() {
         // Direct LinkedIn URL or X/Twitter URL → skip disambiguation, go straight to research
         const hasDirectUrl = url && url.includes("linkedin.com/in/");
         const h = handle || url || "";
-        const looksLikeUsername = !h.includes(" ") && !h.includes("-") && /[A-Z]/.test(h) && h.length > 3;
+        const looksLikeUsername = !h.includes(" ") && !h.includes("-") && h.length > 3 && /^[a-zA-Z0-9_]+$/.test(h);
         const isXHandle = h.match(/(?:x\.com|twitter\.com)\//) || h.startsWith("@") || looksLikeUsername;
 
         // Only run disambiguation for plain name searches (no direct URLs or X handles)
