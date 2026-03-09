@@ -40,11 +40,52 @@ function SimulationContent() {
     new DefaultChatTransport({ api: "/api/simulate" })
   );
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, error } = useChat({
     transport: transportRef.current,
   });
 
   const isStreaming = status === "streaming" || status === "submitted";
+
+  // Stall detector: if streaming for 45s+ with no new content, retry
+  const lastMessageCountRef = useRef(0);
+  const stallTimerRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    // Clear any existing timer
+    if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+
+    if (isStreaming) {
+      const currentCount = messages.length;
+      // Count total parts across all messages
+      let totalParts = 0;
+      messages.forEach((m) => { totalParts += (m.parts || []).length; });
+
+      stallTimerRef.current = setTimeout(() => {
+        // Check if we got new content since timer started
+        let newParts = 0;
+        messages.forEach((m) => { newParts += (m.parts || []).length; });
+        if (newParts === totalParts && (status === "streaming" || status === "submitted")) {
+          console.log("[stall-detector] Stalled for 45s, retrying...");
+          // Force a continue message
+          sendMessage({
+            text: `Continue the simulation from where you left off. Keep the narrative going.${profileRef.current ? `\n\nPROFILE DATA:\n${profileRef.current}` : ""}`,
+          });
+        }
+      }, 45000);
+    }
+
+    return () => {
+      if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+    };
+  }, [isStreaming, messages, status, sendMessage]);
+
+  // Error recovery: if the chat errors out, show retry
+  const [showRetry, setShowRetry] = useState(false);
+  useEffect(() => {
+    if (error) {
+      console.error("[chat-error]", error);
+      setShowRetry(true);
+    }
+  }, [error]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -496,7 +537,7 @@ function SimulationContent() {
                 return <div className="space-y-2">{elements}</div>;
               })()}
 
-              {isStreaming && (
+              {isStreaming && !showRetry && (
                 <motion.div
                   className="mt-8 mb-4"
                   initial={{ opacity: 0 }}
@@ -510,6 +551,28 @@ function SimulationContent() {
                   >
                     simulating the future...
                   </Shimmer>
+                </motion.div>
+              )}
+
+              {/* Error / stall retry */}
+              {showRetry && (
+                <motion.div
+                  className="mt-8 mb-4 flex flex-col items-center gap-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <p className="text-white/40 text-sm">Something stalled. The AI might need a nudge.</p>
+                  <button
+                    onClick={() => {
+                      setShowRetry(false);
+                      sendMessage({
+                        text: `Continue the simulation from where you left off. Keep going.\n\nPROFILE DATA:\n${profileRef.current}`,
+                      });
+                    }}
+                    className="px-5 py-2 rounded-full bg-white/10 text-white/60 text-sm hover:bg-white/15 transition-all cursor-pointer border border-white/10"
+                  >
+                    Continue →
+                  </button>
                 </motion.div>
               )}
             </motion.div>

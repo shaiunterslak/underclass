@@ -69,6 +69,7 @@ GAME ENDING:
 - After showGameOver, do NOT call any more tools. The game is over.`;
 
 export async function POST(req: Request) {
+  try {
   const { messages: uiMessages } = await req.json();
   const modelMessages = await convertToModelMessages(uiMessages);
 
@@ -112,4 +113,11 @@ export async function POST(req: Request) {
   });
 
   return result.toUIMessageStreamResponse();
+  } catch (error) {
+    console.error("Simulate API error:", error);
+    return new Response(JSON.stringify({ error: "Simulation failed. Please try again." }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
