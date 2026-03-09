@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
     "@ai-sdk/react": "^3.0.118",
+    "@neondatabase/serverless": "^1.0.2",
     "ai": "^6.0.116",
     "framer-motion": "^12.35.1",
     "next": "16.1.6",

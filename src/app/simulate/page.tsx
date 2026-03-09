@@ -11,6 +11,7 @@ import { SimulationControls, DEFAULT_SETTINGS, type SimulationSettings } from "@
 import { ALL_SIMULATIONS } from "@/simulations/registry";
 import type { Simulation } from "@/simulations/types";
 import { playSound, setSoundEnabled } from "@/lib/sounds";
+import { viralizeUrls } from "@/lib/viral";
 
 // Build lookup maps from the simulation registry
 const TOOL_MAP = new Map<string, Simulation>(
@@ -25,6 +26,8 @@ function SimulationContent() {
   const [choiceDisabled, setChoiceDisabled] = useState(false);
   const [personName, setPersonName] = useState("");
   const [settings, setSettings] = useState<SimulationSettings>(DEFAULT_SETTINGS);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasStartedRef = useRef(false);
   const profileRef = useRef("");
@@ -82,6 +85,50 @@ function SimulationContent() {
     research();
   }, [url, sendMessage]);
 
+  const handleShare = useCallback(async () => {
+    if (isSaving || shareUrl) return;
+    setIsSaving(true);
+    try {
+      // Extract last PUL score from messages
+      let lastPul: number | undefined;
+      for (const msg of [...messages].reverse()) {
+        if (msg.role !== "assistant") continue;
+        for (const part of [...(msg.parts || [])].reverse()) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const p = part as any;
+          if (p.type?.startsWith?.("tool-showPULUpdate") || p.toolName === "showPULUpdate") {
+            lastPul = p.input?.score;
+            break;
+          }
+        }
+        if (lastPul !== undefined) break;
+      }
+
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          linkedinUrl: url,
+          personName,
+          profileData: profileRef.current ? JSON.parse(profileRef.current) : {},
+          messages: messages.map((m) => ({ role: m.role, parts: m.parts })),
+          finalPul: lastPul,
+        }),
+      });
+
+      if (res.ok) {
+        const { shareUrl: newUrl } = await res.json();
+        setShareUrl(newUrl);
+        // Copy to clipboard
+        await navigator.clipboard.writeText(newUrl).catch(() => {});
+      }
+    } catch (e) {
+      console.error("Share error:", e);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving, shareUrl, messages, url, personName]);
+
   const handleSettings = useCallback((newSettings: SimulationSettings) => {
     setSettings(newSettings);
     setSoundEnabled(newSettings.soundEnabled);
@@ -123,8 +170,16 @@ function SimulationContent() {
       playSound(toolName);
     }
 
-    const safeArgs = args || {};
+    const safeArgs = { ...(args || {}) };
     const Component = sim.component;
+
+    // Viralize URLs in text-heavy fields
+    const textFields = ["content", "message", "headline", "narrative", "subject", "preview"];
+    for (const field of textFields) {
+      if (typeof safeArgs[field] === "string") {
+        safeArgs[field] = viralizeUrls(safeArgs[field]);
+      }
+    }
 
     // Inject onChoice + disabled for the choice component
     const extraProps = toolName === "showChoice"
@@ -289,7 +344,38 @@ function SimulationContent() {
 
       {/* Floating controls */}
       {!isResearching && (
-        <SimulationControls settings={settings} onSettingsChange={handleSettings} />
+        <>
+          {/* Share button */}
+          <motion.button
+            className="fixed bottom-6 right-20 z-50 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/15 flex items-center gap-2 px-4 text-white/60 hover:text-white hover:bg-white/15 transition-all cursor-pointer shadow-2xl"
+            onClick={handleShare}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            disabled={isSaving}
+          >
+            {shareUrl ? (
+              <>
+                <svg className="w-4 h-4 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                <span className="text-xs text-green-400">Copied!</span>
+              </>
+            ) : isSaving ? (
+              <span className="text-xs">Saving...</span>
+            ) : (
+              <>
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                  <polyline points="16 6 12 2 8 6" />
+                  <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                <span className="text-xs">Share</span>
+              </>
+            )}
+          </motion.button>
+
+          <SimulationControls settings={settings} onSettingsChange={handleSettings} />
+        </>
       )}
     </main>
   );
