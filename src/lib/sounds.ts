@@ -27,9 +27,13 @@ export function playSound(platform: string) {
     showChatGPT: "chatgpt",
     showClaude: "claude",
     showInstagram: "instagram",
+    showPULUpdate: "pul",
+    showChapter: "none",
+    showAiMilestone: "none",
   };
 
-  const file = soundMap[platform] || "notification";
+  const file = soundMap[platform];
+  if (!file || file === "none") return;
   const path = `/sounds/${file}.mp3`;
 
   try {
