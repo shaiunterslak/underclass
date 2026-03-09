@@ -38,6 +38,7 @@ function SimulationContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [appliedNotes, setAppliedNotes] = useState<string[]>([]);
+  const [steeringNotes, setSteeringNotes] = useState<Array<{ text: string; id: number }>>([]);
   const [selectedChoices, setSelectedChoices] = useState<Map<string, string>>(new Map());
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasStartedRef = useRef(false);
@@ -277,6 +278,21 @@ function SimulationContent() {
     setSettings(newSettings);
     setSoundEnabled(newSettings.soundEnabled);
   }, []);
+
+  const handleSteer = useCallback((note: string) => {
+    // Add to visible timeline
+    setSteeringNotes((prev) => [...prev, { text: note, id: Date.now() }]);
+    // Set as active steering for next generation
+    setSettings((prev) => ({ ...prev, userNotes: "" }));
+    setAppliedNotes((prev) => [...prev, note]);
+
+    // If not currently streaming, send a steering message immediately
+    if (status === "ready" && messages.length > 0) {
+      sendMessageRef.current({
+        text: `USER DIRECTION: ${note}\n\nContinue the simulation incorporating this direction. Keep the narrative going.\n\nPROFILE DATA:\n${profileRef.current}`,
+      });
+    }
+  }, [status, messages.length]);
 
   const handleChoice = useCallback(
     (choice: string) => {
@@ -727,6 +743,23 @@ function SimulationContent() {
                 return <div className="space-y-2">{elements}</div>;
               })()}
 
+              {/* Steering notes submitted by user */}
+              {steeringNotes.map((note) => (
+                <motion.div
+                  key={note.id}
+                  className="flex items-center gap-2 my-4"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="flex-1 h-px bg-cyan-400/10" />
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/5 border border-cyan-400/15">
+                    <span className="text-[10px]">🎯</span>
+                    <span className="text-[11px] text-cyan-400/60 italic">{note.text}</span>
+                  </div>
+                  <div className="flex-1 h-px bg-cyan-400/10" />
+                </motion.div>
+              ))}
+
               {isStreaming && !showRetry && (
                 <motion.div
                   className="mt-8 mb-4"
@@ -833,7 +866,7 @@ function SimulationContent() {
             )}
           </motion.button>
 
-          <SimulationControls settings={settings} onSettingsChange={handleSettings} />
+          <SimulationControls settings={settings} onSettingsChange={handleSettings} onSteer={handleSteer} />
         </>
       )}
     </main>

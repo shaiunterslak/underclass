@@ -6,6 +6,7 @@ import { ALL_SIMULATIONS } from "@/simulations/registry";
 
 interface SimulationControlsProps {
   onSettingsChange: (settings: SimulationSettings) => void;
+  onSteer?: (note: string) => void;
   settings: SimulationSettings;
 }
 
@@ -30,7 +31,7 @@ const CATEGORIES = [
   { key: "system", label: "System", description: "News alerts" },
 ] as const;
 
-export function SimulationControls({ onSettingsChange, settings }: SimulationControlsProps) {
+export function SimulationControls({ onSettingsChange, onSteer, settings }: SimulationControlsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleSimulation = useCallback(
@@ -189,10 +190,27 @@ export function SimulationControls({ onSettingsChange, settings }: SimulationCon
               <textarea
                 value={settings.userNotes}
                 onChange={(e) => onSettingsChange({ ...settings, userNotes: e.target.value })}
-                placeholder="e.g. 'Focus more on the personal/family side' or 'Make it darker' or 'I want to stay in crypto'"
-                className="w-full h-20 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[13px] text-white/80 placeholder:text-white/20 resize-none outline-none focus:border-white/20 transition-colors"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && settings.userNotes.trim()) {
+                    e.preventDefault();
+                    onSteer?.(settings.userNotes.trim());
+                  }
+                }}
+                placeholder="e.g. 'he pivots to a Spanish startup' or 'make it darker'"
+                className="w-full h-16 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[13px] text-white/80 placeholder:text-white/20 resize-none outline-none focus:border-white/20 transition-colors"
               />
-              <p className="text-[10px] text-white/25 mt-1">Applied to next generated chapters</p>
+              <div className="flex items-center justify-between mt-1.5">
+                <p className="text-[10px] text-white/25">Enter to submit · Shift+Enter for newline</p>
+                <button
+                  onClick={() => {
+                    if (settings.userNotes.trim()) onSteer?.(settings.userNotes.trim());
+                  }}
+                  disabled={!settings.userNotes.trim()}
+                  className="text-[11px] px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400/80 border border-cyan-400/20 hover:bg-cyan-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-default"
+                >
+                  Submit →
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
