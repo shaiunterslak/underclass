@@ -492,10 +492,26 @@ export async function findPersonByHandle(handle: string): Promise<PersonProfile>
   const apiKey = process.env.EXA_API_KEY;
   if (!apiKey) throw new Error("EXA_API_KEY not set");
 
+  // For username-style handles, try as LinkedIn slug first (many people use same handle on X and LinkedIn)
+  const looksLikeUsername = !handle.includes(" ") && !handle.includes("-") && handle.length > 3 && /^[a-zA-Z0-9_]+$/.test(handle);
+  
+  if (looksLikeUsername && !handle.includes("x.com") && !handle.includes("twitter.com")) {
+    const linkedinUrl = `https://www.linkedin.com/in/${handle.replace(/^@/, "")}`;
+    console.log(`[exa] Trying handle as LinkedIn slug: ${linkedinUrl}`);
+    try {
+      const directResults = await exaGetContents(apiKey, [linkedinUrl]);
+      if (directResults[0]?.text && directResults[0]?.title) {
+        console.log(`[exa] LinkedIn profile found: ${directResults[0].title}`);
+        return researchPerson(linkedinUrl);
+      }
+    } catch {
+      // Not a LinkedIn slug, continue to X handle search
+    }
+  }
+
   // Detect X/Twitter handle or URL → use Exa Answer to find their LinkedIn
   // Also treat single-word handles that look like usernames (no spaces/hyphens) as potential X handles
   // Includes: camelCase (FarzaTV), all lowercase (preshdkumar), etc.
-  const looksLikeUsername = !handle.includes(" ") && !handle.includes("-") && handle.length > 3 && /^[a-zA-Z0-9_]+$/.test(handle);
   const xHandleMatch = handle.match(/(?:x\.com|twitter\.com)\/([^/?]+)/) || 
     (handle.startsWith("@") ? [null, handle.slice(1)] : null) ||
     (looksLikeUsername ? [null, handle] : null);
