@@ -77,7 +77,8 @@ export async function POST(req: Request) {
   const clientModel = body.model; // "basic" or undefined
   const modelMessages = await convertToModelMessages(uiMessages);
 
-  // Extract profile data from user messages
+  // Extract profile data from user messages, then STRIP it from all messages
+  // to avoid sending it 30x in conversation history (was causing 338K+ prompt tokens)
   let profileData = "Not available";
   for (const msg of modelMessages) {
     if (msg.role === "user") {
@@ -87,6 +88,21 @@ export async function POST(req: Request) {
       if (content.includes("PROFILE DATA:")) {
         profileData = content.split("PROFILE DATA:")[1]?.trim() || profileData;
       }
+    }
+  }
+
+  // Strip profile data from all user messages — it's already in the system prompt
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const msg of modelMessages as any[]) {
+    if (msg.role === "user" && Array.isArray(msg.content)) {
+      for (let i = 0; i < msg.content.length; i++) {
+        const c = msg.content[i];
+        if (c.type === "text" && c.text?.includes("PROFILE DATA:")) {
+          msg.content[i] = { ...c, text: c.text.split("\n\nPROFILE DATA:")[0].trim() };
+        }
+      }
+    } else if (msg.role === "user" && typeof msg.content === "string" && msg.content.includes("PROFILE DATA:")) {
+      msg.content = msg.content.split("\n\nPROFILE DATA:")[0].trim();
     }
   }
 
