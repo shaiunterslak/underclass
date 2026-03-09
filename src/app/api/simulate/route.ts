@@ -87,7 +87,8 @@ export async function POST(req: Request) {
 
   // Compose system prompt from base + simulation fragments
   const simulationPrompts = buildPromptFragments(ALL_SIMULATIONS);
-  const systemPrompt = `${BASE_PROMPT}\n\nAVAILABLE SIMULATION TYPES:\n${simulationPrompts}\n\nProfile data: ${profileData}`;
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const systemPrompt = `${BASE_PROMPT}\n\nTODAY'S DATE: ${today}\nThe simulation STARTS TODAY. Begin the narrative from this exact date and advance forward.\n\nAVAILABLE SIMULATION TYPES:\n${simulationPrompts}\n\nProfile data: ${profileData}`;
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-20250514"),
@@ -95,7 +96,7 @@ export async function POST(req: Request) {
     messages: modelMessages,
     toolChoice: "auto",
     tools: aiTools,
-    stopWhen: stepCountIs(25),
+    stopWhen: stepCountIs(80),
   });
 
   return result.toUIMessageStreamResponse();

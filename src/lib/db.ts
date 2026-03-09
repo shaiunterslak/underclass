@@ -1,8 +1,8 @@
 import { neon } from "@neondatabase/serverless";
 
 function getDb() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL not set");
+  const url = process.env.POSTGRES_URL;
+  if (!url) throw new Error("POSTGRES_URL not set");
   return neon(url);
 }
 
@@ -26,7 +26,6 @@ export async function initDb() {
   `;
 }
 
-// Generate a short, shareable ID
 function generateId(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let id = "";
@@ -46,7 +45,6 @@ export interface SessionData {
   createdAt: string;
 }
 
-// Create a new session
 export async function createSession(data: {
   linkedinUrl: string;
   personName: string;
@@ -65,7 +63,6 @@ export async function createSession(data: {
   return id;
 }
 
-// Get a session by ID
 export async function getSession(id: string): Promise<SessionData | null> {
   const sql = getDb();
   const rows = await sql`
@@ -87,7 +84,6 @@ export async function getSession(id: string): Promise<SessionData | null> {
   };
 }
 
-// Update a session's messages (for saving progress)
 export async function updateSession(id: string, data: {
   messages: Record<string, unknown>[];
   finalPul?: number;
@@ -95,7 +91,7 @@ export async function updateSession(id: string, data: {
   const sql = getDb();
   await sql`
     UPDATE sessions
-    SET messages = ${JSON.stringify(data.messages)},
+    SET messages = ${JSON.stringify(data.messages)}::jsonb,
         final_pul = ${data.finalPul || null},
         updated_at = NOW()
     WHERE id = ${id}

@@ -156,6 +156,39 @@ function SimulationContent() {
     [sendMessage, settings.userNotes]
   );
 
+  // Auto-continue: when streaming finishes and last tool wasn't a choice, keep going
+  const prevStatusRef = useRef(status);
+  useEffect(() => {
+    const wasStreaming = prevStatusRef.current === "streaming" || prevStatusRef.current === "submitted";
+    const nowReady = status === "ready";
+    prevStatusRef.current = status;
+
+    if (!wasStreaming || !nowReady || isResearching) return;
+
+    // Check if the last tool was a choice — if so, wait for user input
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === "assistant") {
+      const parts = lastMsg.parts || [];
+      for (let i = parts.length - 1; i >= 0; i--) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const p = parts[i] as any;
+        const toolName = p.toolName || (typeof p.type === "string" && p.type.startsWith("tool-") ? p.type.slice(5) : null);
+        if (toolName === "showChoice") return; // Wait for user to pick
+        if (toolName) break; // Last tool wasn't a choice — auto-continue
+      }
+    }
+
+    // Auto-continue after a short pause
+    const timer = setTimeout(() => {
+      const notes = settings.userNotes ? `\n\nUSER DIRECTION: ${settings.userNotes}` : "";
+      sendMessage({
+        text: `Continue the simulation — advance the timeline further, show more consequences and new developments. Keep the PUL updating. End with another choice.${notes}\n\nPROFILE DATA:\n${profileRef.current}`,
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [status, messages, isResearching, sendMessage, settings.userNotes]);
+
   // Track which tools have already played sounds
   const playedSoundsRef = useRef(new Set<string>());
 
