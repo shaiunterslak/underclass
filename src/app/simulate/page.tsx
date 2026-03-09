@@ -28,6 +28,8 @@ function SimulationContent() {
   const [choiceDisabled, setChoiceDisabled] = useState(false);
   const [personName, setPersonName] = useState("");
   const [profileImage, setProfileImage] = useState("");
+  const [gameOverShareUrl, setGameOverShareUrl] = useState<string | null>(null);
+  const gameOverSavedRef = useRef(false);
   const [candidates, setCandidates] = useState<Array<{
     name: string; headline: string; location: string; profileImageUrl: string; linkedinUrl: string;
   }> | null>(null);
@@ -347,6 +349,11 @@ function SimulationContent() {
       return;
     }
 
+    if (lastToolName === "showGameOver") {
+      // Game is over — don't continue
+      return;
+    }
+
     // No choice at end — auto-continue after a short pause
     const timer = setTimeout(() => {
       const notes = settings.userNotes ? `\n\nUSER DIRECTION: ${settings.userNotes}` : "";
@@ -401,13 +408,35 @@ function SimulationContent() {
     }
     if (toolName === "showGameOver") {
       if (!safeArgs.personName) safeArgs.personName = personName;
-      // Track game over
-      if (posthog.__loaded) {
-        posthog.capture("game_over", {
-          person_name: personName,
-          final_pul: safeArgs.finalPul,
-          outcome: safeArgs.outcome,
-        });
+      safeArgs.sessionShareUrl = gameOverShareUrl || undefined;
+
+      // Track game over + auto-save session
+      if (!gameOverSavedRef.current) {
+        gameOverSavedRef.current = true;
+        if (posthog.__loaded) {
+          posthog.capture("game_over", {
+            person_name: personName,
+            final_pul: safeArgs.finalPul,
+            outcome: safeArgs.outcome,
+          });
+        }
+        // Auto-save session in background
+        fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            linkedinUrl: url,
+            personName,
+            profileData: profileRef.current ? JSON.parse(profileRef.current) : {},
+            messages: messages.map((m) => ({ role: m.role, parts: m.parts })),
+            finalPul: safeArgs.finalPul,
+          }),
+        })
+          .then((r) => r.json())
+          .then(({ shareUrl: savedUrl }) => {
+            if (savedUrl) setGameOverShareUrl(savedUrl);
+          })
+          .catch(() => {});
       }
     }
 

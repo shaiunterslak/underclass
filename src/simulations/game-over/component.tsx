@@ -11,6 +11,7 @@ interface Props {
   finalYear?: string;
   epitaph?: string;
   personName?: string;
+  sessionShareUrl?: string;
 }
 
 function getOutcomeConfig(outcome: string, pul: number) {
@@ -53,17 +54,19 @@ export function GameOver({
   finalYear = "2050",
   epitaph = "",
   personName = "",
+  sessionShareUrl,
 }: Props) {
   const pul = Math.max(0, Math.min(100, finalPul));
   const config = getOutcomeConfig(outcome, pul);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = typeof window !== "undefined"
+  const ogImageUrl = typeof window !== "undefined"
     ? `${window.location.origin}/api/og?name=${encodeURIComponent(personName)}&pul=${pul}&outcome=${outcome}`
     : "";
 
-  const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+  // The session share URL has proper OG tags, so X will render the image card
+  const linkToShare = sessionShareUrl || (typeof window !== "undefined" ? window.location.origin : "");
 
   const shareText = outcome === "elite"
     ? `I survived the AI era. Final PUL: ${pul}%. ${headline} 🛡️\n\nWill you survive? →`
@@ -77,12 +80,12 @@ export function GameOver({
       // Try Web Share API first (mobile — supports images)
       if (navigator.share && /mobile|android|iphone/i.test(navigator.userAgent)) {
         try {
-          const imgRes = await fetch(shareUrl);
+          const imgRes = await fetch(ogImageUrl);
           const blob = await imgRes.blob();
           const file = new File([blob], "underclass-result.png", { type: "image/png" });
           await navigator.share({
             text: shareText,
-            url: `${window.location.origin}`,
+            url: linkToShare,
             files: [file],
           });
           return;
@@ -91,17 +94,17 @@ export function GameOver({
         }
       }
 
-      // Desktop: open X composer with link (OG image shows as card)
-      const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(window.location.origin)}`;
+      // Desktop: open X composer with session URL (has OG tags → X renders image card)
+      const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(linkToShare)}`;
       window.open(tweetUrl, "_blank", "width=550,height=420");
     } finally {
       setSharing(false);
     }
-  }, [shareUrl, shareText]);
+  }, [ogImageUrl, shareText, linkToShare]);
 
   const handleCopyImage = useCallback(async () => {
     try {
-      const imgRes = await fetch(shareUrl);
+      const imgRes = await fetch(ogImageUrl);
       const blob = await imgRes.blob();
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob }),
@@ -109,12 +112,12 @@ export function GameOver({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback: copy text
-      await navigator.clipboard.writeText(`${shareText}\n${window.location.origin}`);
+      // Fallback: copy link
+      await navigator.clipboard.writeText(linkToShare);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [shareUrl, shareText]);
+  }, [ogImageUrl, linkToShare]);
 
   return (
     <motion.div
