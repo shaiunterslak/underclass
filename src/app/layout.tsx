@@ -10,31 +10,31 @@ const inter = Inter({
 const APP_URL = "https://whats-next-silk-one.vercel.app";
 
 export const metadata: Metadata = {
-  title: "what's next — simulate your AI future",
+  title: "underclass — will you survive the age of AI?",
   description:
-    "Paste your LinkedIn URL and watch AI simulate the next 50 years of your career. Platform-accurate notifications, a PUL score tracking your odds, and choices that shape your fate.",
+    "Paste your LinkedIn and AI simulates the next 50 years of your career. Your PUL score reveals whether you'll join the elite — or fall into the permanent underclass.",
   metadataBase: new URL(APP_URL),
   openGraph: {
-    title: "what's next — simulate your AI future",
+    title: "underclass — will you survive the age of AI?",
     description:
-      "Paste your LinkedIn URL and watch AI simulate the next 50 years of your career.",
+      "AI simulates the next 50 years of your career. Find out your Permanent Underclass Likelihood score.",
     url: APP_URL,
-    siteName: "what's next",
+    siteName: "underclass",
     images: [
       {
         url: `${APP_URL}/api/og`,
         width: 1200,
         height: 630,
-        alt: "what's next — simulate your AI future",
+        alt: "underclass — will you survive the age of AI?",
       },
     ],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "what's next — simulate your AI future",
+    title: "underclass — will you survive the age of AI?",
     description:
-      "Paste your LinkedIn and watch AI simulate the next 50 years of your career.",
+      "AI simulates the next 50 years of your career. Find out your Permanent Underclass Likelihood score.",
     images: [`${APP_URL}/api/og`],
   },
   icons: {

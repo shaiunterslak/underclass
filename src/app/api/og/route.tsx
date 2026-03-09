@@ -5,7 +5,13 @@ export const runtime = "edge";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const name = searchParams.get("name") || "";
-  const pul = searchParams.get("pul") || "";
+  const pul = searchParams.get("pul") || "47";
+
+  const pulNum = Number(pul);
+  const pulColor =
+    pulNum <= 30 ? "#22c55e" : pulNum <= 55 ? "#eab308" : pulNum <= 75 ? "#f97316" : "#ef4444";
+  const pulLabel =
+    pulNum <= 20 ? "ELITE TRACK" : pulNum <= 40 ? "ADAPTING" : pulNum <= 55 ? "AT RISK" : pulNum <= 75 ? "DANGER ZONE" : "PERMANENT UNDERCLASS";
 
   return new ImageResponse(
     (
@@ -17,142 +23,147 @@ export async function GET(req: Request) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0a0e1a 0%, #0f1629 50%, #0a0e1a 100%)",
-          fontFamily: "system-ui, sans-serif",
+          background: "#0a0e1a",
+          fontFamily: "system-ui, -apple-system, sans-serif",
           position: "relative",
+          overflow: "hidden",
         }}
       >
-        {/* Accent bar at top */}
+        {/* Background gradient blobs */}
         <div
           style={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 4,
-            background: "linear-gradient(90deg, #22d3ee, #a78bfa)",
-          }}
-        />
-
-        {/* Subtle glow */}
-        <div
-          style={{
-            position: "absolute",
-            top: "30%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
+            top: -100,
+            left: -100,
             width: 500,
-            height: 200,
+            height: 500,
             borderRadius: "50%",
-            background: "radial-gradient(ellipse, rgba(34,211,238,0.06), transparent)",
+            background: "radial-gradient(circle, rgba(239,68,68,0.08), transparent 70%)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: -150,
+            right: -100,
+            width: 600,
+            height: 600,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(234,179,8,0.06), transparent 70%)",
           }}
         />
 
-        {/* Chevron icon */}
-        <div style={{ display: "flex", marginBottom: 24 }}>
-          <svg width="80" height="60" viewBox="0 0 160 110">
-            <polyline
-              points="30,20 80,55 30,90"
-              fill="none"
-              stroke="#22d3ee"
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.8"
-            />
-            <polyline
-              points="80,20 130,55 80,90"
-              fill="none"
-              stroke="#a78bfa"
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.4"
-            />
-          </svg>
-        </div>
-
-        {/* Title */}
+        {/* Main content */}
         <div
           style={{
-            fontSize: 72,
-            fontWeight: 800,
-            color: "white",
-            marginBottom: 16,
-            letterSpacing: "-0.02em",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 0,
           }}
         >
-          what&apos;s next
-        </div>
+          {/* Title */}
+          <div
+            style={{
+              fontSize: 88,
+              fontWeight: 800,
+              color: "white",
+              letterSpacing: "-0.03em",
+              lineHeight: 1,
+            }}
+          >
+            underclass
+          </div>
 
-        {/* Subtitle / personalized */}
-        <div
-          style={{
-            fontSize: 26,
-            color: "rgba(255,255,255,0.5)",
-            marginBottom: 40,
-          }}
-        >
-          {name
-            ? `${name}'s AI future simulation`
-            : "simulate the next 50 years of your life through AI"}
-        </div>
+          {/* Tagline */}
+          <div
+            style={{
+              fontSize: 24,
+              color: "rgba(255,255,255,0.4)",
+              marginTop: 16,
+              marginBottom: 48,
+            }}
+          >
+            {name
+              ? `will ${name} survive the AI era?`
+              : "will you survive the age of AI?"}
+          </div>
 
-        {/* PUL bar if provided */}
-        {pul && (
+          {/* PUL card — matching the actual app component */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              width: 500,
-              padding: "16px 24px",
-              borderRadius: 12,
-              background: "rgba(255,255,255,0.04)",
+              width: 560,
+              padding: "20px 28px",
+              borderRadius: 16,
+              background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.06)",
-              marginBottom: 32,
             }}
           >
+            {/* Top row */}
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 10,
+                marginBottom: 12,
               }}
             >
-              <span
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.3)",
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Permanent Underclass Likelihood
-              </span>
-              <span
-                style={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                  fontFamily: "monospace",
-                  color:
-                    Number(pul) <= 30
-                      ? "#22c55e"
-                      : Number(pul) <= 55
-                        ? "#eab308"
-                        : Number(pul) <= 75
-                          ? "#f97316"
-                          : "#ef4444",
-                }}
-              >
-                {pul}%
-              </span>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: pulColor,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {pulLabel}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(255,255,255,0.25)",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    marginTop: 2,
+                  }}
+                >
+                  Permanent Underclass Likelihood
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline" }}>
+                <span
+                  style={{
+                    fontSize: 42,
+                    fontWeight: 900,
+                    fontFamily: "monospace",
+                    color: pulColor,
+                    lineHeight: 1,
+                  }}
+                >
+                  {pul}
+                </span>
+                <span
+                  style={{
+                    fontSize: 18,
+                    color: "rgba(255,255,255,0.3)",
+                    marginLeft: 2,
+                  }}
+                >
+                  %
+                </span>
+              </div>
             </div>
+
+            {/* Progress bar */}
             <div
               style={{
                 width: "100%",
-                height: 8,
-                borderRadius: 4,
+                height: 10,
+                borderRadius: 5,
                 background: "rgba(255,255,255,0.06)",
                 display: "flex",
               }}
@@ -160,58 +171,41 @@ export async function GET(req: Request) {
               <div
                 style={{
                   width: `${pul}%`,
-                  height: 8,
-                  borderRadius: 4,
-                  background:
-                    Number(pul) <= 30
-                      ? "#22c55e"
-                      : Number(pul) <= 55
-                        ? "#eab308"
-                        : Number(pul) <= 75
-                          ? "#f97316"
-                          : "#ef4444",
+                  height: 10,
+                  borderRadius: 5,
+                  background: pulColor,
                 }}
               />
             </div>
-          </div>
-        )}
 
-        {/* Mock notification pills */}
-        <div style={{ display: "flex", gap: 12 }}>
-          {[
-            { icon: "💬", text: "iMessage from CEO", color: "#22d3ee" },
-            { icon: "🐦", text: "Your tweet went viral", color: "#a78bfa" },
-            { icon: "📰", text: "Breaking: AGI achieved", color: "#f97316" },
-          ].map((pill) => (
+            {/* Scale */}
             <div
-              key={pill.text}
               style={{
                 display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 16px",
-                borderRadius: 8,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                fontSize: 13,
-                color: pill.color,
+                justifyContent: "space-between",
+                marginTop: 6,
               }}
             >
-              {pill.icon} {pill.text}
+              <span style={{ fontSize: 9, color: "rgba(34,197,94,0.4)" }}>ELITE</span>
+              <span style={{ fontSize: 9, color: "rgba(234,179,8,0.4)" }}>AT RISK</span>
+              <span style={{ fontSize: 9, color: "rgba(239,68,68,0.4)" }}>UNDERCLASS</span>
             </div>
-          ))}
+          </div>
         </div>
 
-        {/* Bottom tagline */}
+        {/* Bottom CTA */}
         <div
           style={{
             position: "absolute",
-            bottom: 40,
-            fontSize: 18,
-            color: "rgba(255,255,255,0.25)",
+            bottom: 36,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 16,
+            color: "rgba(255,255,255,0.2)",
           }}
         >
-          Paste your LinkedIn → see your future
+          Paste your LinkedIn → find out your score
         </div>
       </div>
     ),

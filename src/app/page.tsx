@@ -43,7 +43,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          find out what&apos;s next
+          underclass
         </motion.h1>
 
         <motion.p
@@ -52,7 +52,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
         >
-          simulate your life through the age of AI
+          will you survive the age of AI?
         </motion.p>
 
         <motion.form
