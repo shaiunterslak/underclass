@@ -112,14 +112,14 @@ export async function findCandidates(linkedinUrl: string): Promise<PersonCandida
     exaSearch(apiKey, {
       query: cleanUrl,
       type: "auto",
-      numResults: 3,
+      numResults: 10,
       contents: { text: { maxCharacters: 500 } },
     }),
     exaSearch(apiKey, {
       query: `${nameFromUrl} linkedin`,
       category: "people",
       type: "auto",
-      numResults: 5,
+      numResults: 10,
       contents: { text: { maxCharacters: 500 } },
     }),
   ]);
@@ -161,7 +161,7 @@ export async function findCandidates(linkedinUrl: string): Promise<PersonCandida
   // Priority 3: People search results
   for (const r of peopleResults) addCandidate(r);
 
-  return candidates.slice(0, 5);
+  return candidates.slice(0, 100);
 }
 
 export async function researchPerson(linkedinUrl: string): Promise<PersonProfile> {

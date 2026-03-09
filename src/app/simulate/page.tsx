@@ -205,7 +205,7 @@ function SimulationContent() {
             if (uniqueNames.size > 1) {
               clearInterval(msgInterval);
               setIsResearching(false);
-              setCandidates(foundCandidates.slice(0, 3));
+              setCandidates(foundCandidates);
               return; // Wait for user to pick
             }
           }
@@ -587,15 +587,15 @@ function SimulationContent() {
           {/* Candidate disambiguation */}
           {candidates && candidates.length > 0 && (
             <motion.div
-              className="flex flex-col items-center justify-center min-h-[80vh] gap-6"
+              className="flex flex-col items-center pt-12 pb-20 gap-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
               <div className="text-center mb-2">
                 <h2 className="text-xl font-semibold text-white/80 mb-1">Which one is you?</h2>
-                <p className="text-sm text-white/30">We found a few matches</p>
+                <p className="text-sm text-white/30">We found {candidates.length} matches</p>
               </div>
-              <div className="flex flex-col gap-3 w-full max-w-md">
+              <div className="flex flex-col gap-2 w-full max-w-md max-h-[60vh] overflow-y-auto pr-1">
                 {candidates.map((c, i) => (
                   <motion.button
                     key={c.linkedinUrl || i}
