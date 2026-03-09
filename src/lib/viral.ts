@@ -38,10 +38,11 @@ export function viralizeUrls(text: string, linkedinUrl?: string): string {
     `https://${APP_DOMAIN}`
   );
 
-  // Replace Twitter/X URLs with generic app link
+  // Replace Twitter/X URLs with handle-based app link
+  // x.com/shaiunterslak → underclass.sh/shaiunterslak
   result = result.replace(
-    /https?:\/\/(www\.)?(x|twitter)\.com\/[a-zA-Z0-9_]+/g,
-    `https://${APP_DOMAIN}`
+    /https?:\/\/(www\.)?(x|twitter)\.com\/([a-zA-Z0-9_]+)/g,
+    (_, __, ___, handle) => `https://${APP_DOMAIN}/${handle}`
   );
 
   return result;
