@@ -76,6 +76,11 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.mask-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+
 .notification-card {
   background: rgba(30, 30, 30, 0.95);
   backdrop-filter: blur(10px);

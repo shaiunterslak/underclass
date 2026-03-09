@@ -84,6 +84,27 @@ export async function getSession(id: string): Promise<SessionData | null> {
   };
 }
 
+// Get recent sessions for the landing page marquee
+export async function getRecentSessions(limit = 20): Promise<Array<{
+  id: string;
+  personName: string;
+  finalPul: number | null;
+}>> {
+  const sql = getDb();
+  const rows = await sql`
+    SELECT id, person_name, final_pul
+    FROM sessions
+    WHERE person_name IS NOT NULL AND person_name != ''
+    ORDER BY created_at DESC
+    LIMIT ${limit}
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    personName: r.person_name,
+    finalPul: r.final_pul,
+  }));
+}
+
 export async function updateSession(id: string, data: {
   messages: Record<string, unknown>[];
   finalPul?: number;

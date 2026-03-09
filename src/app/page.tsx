@@ -1,13 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+
+interface RecentSession {
+  id: string;
+  personName: string;
+  finalPul: number | null;
+}
+
+function getOutcomeInfo(pul: number | null) {
+  if (pul === null) return { label: "simulating...", color: "text-white/30", bg: "bg-white/5 border-white/10" };
+  if (pul <= 20) return { label: "ELITE", color: "text-green-400", bg: "bg-green-400/5 border-green-400/15" };
+  if (pul <= 60) return { label: "SURVIVED", color: "text-yellow-400", bg: "bg-yellow-400/5 border-yellow-400/15" };
+  return { label: "UNDERCLASS", color: "text-red-400", bg: "bg-red-400/5 border-red-400/15" };
+}
+
+function Marquee({ sessions }: { sessions: RecentSession[] }) {
+  if (sessions.length === 0) return null;
+
+  // Double the items for seamless loop
+  const items = [...sessions, ...sessions];
+
+  return (
+    <div className="w-full overflow-hidden mt-10 max-w-4xl mx-auto mask-fade">
+      <motion.div
+        className="flex gap-3 w-max"
+        animate={{ x: ["0%", "-50%"] }}
+        transition={{
+          duration: sessions.length * 3,
+          ease: "linear",
+          repeat: Infinity,
+        }}
+      >
+        {items.map((session, i) => {
+          const info = getOutcomeInfo(session.finalPul);
+          return (
+            <a
+              key={`${session.id}-${i}`}
+              href={`/s/${session.id}`}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-full border text-nowrap transition-all hover:scale-105 ${info.bg}`}
+            >
+              <span className="text-[13px] text-white/60">{session.personName}</span>
+              {session.finalPul !== null && (
+                <>
+                  <span className={`text-[11px] font-mono font-bold ${info.color}`}>
+                    {session.finalPul}%
+                  </span>
+                  <span className={`text-[9px] uppercase tracking-wider font-bold ${info.color}`}>
+                    {info.label}
+                  </span>
+                </>
+              )}
+            </a>
+          );
+        })}
+      </motion.div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const router = useRouter();
+
+  // Fetch recent sessions
+  useEffect(() => {
+    fetch("/api/recent")
+      .then((r) => r.json())
+      .then((data) => setRecentSessions(data.sessions || []))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,7 +81,6 @@ export default function Home() {
 
     setIsLoading(true);
 
-    // Extract LinkedIn username from URL or use as-is
     let linkedinUrl = url.trim();
     if (!linkedinUrl.startsWith("http")) {
       linkedinUrl = `https://www.linkedin.com/in/${linkedinUrl.replace(/^\/+/, "")}`;
@@ -32,11 +97,11 @@ export default function Home() {
         style={{ backgroundImage: "url(/hero-bg.jpg)" }}
       />
 
-      {/* Gradient overlay for better text readability */}
+      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center px-6 -mt-20">
+      <div className="relative z-10 flex flex-col items-center px-6 -mt-10">
         <motion.h1
           className="text-4xl md:text-5xl lg:text-6xl font-bold text-white text-center mb-4 tracking-tight"
           initial={{ opacity: 0, y: 20 }}
@@ -101,6 +166,16 @@ export default function Home() {
             </button>
           </div>
         </motion.form>
+
+        {/* Recent sessions marquee */}
+        <motion.div
+          className="w-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 1 }}
+        >
+          <Marquee sessions={recentSessions} />
+        </motion.div>
       </div>
     </main>
   );
