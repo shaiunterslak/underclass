@@ -53,6 +53,22 @@ async function exaSearch(apiKey: string, body: Record<string, unknown>): Promise
   }
 }
 
+async function exaGetContents(apiKey: string, urls: string[]): Promise<ExaResult[]> {
+  try {
+    const res = await fetch("https://api.exa.ai/contents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify({ urls, text: { maxCharacters: 3000 } }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || [];
+  } catch (e) {
+    console.error("Exa getContents error:", e);
+    return [];
+  }
+}
+
 async function exaAnswer(apiKey: string, query: string): Promise<string> {
   try {
     const res = await fetch("https://api.exa.ai/answer", {
@@ -171,7 +187,109 @@ export async function researchPerson(linkedinUrl: string): Promise<PersonProfile
   const companies: CompanyInfo[] = [];
   const sources: string[] = [];
 
-  // ── Step 1: Exact URL search first ──────────
+  // ── Step 0: Direct URL fetch via getContents — most accurate ──────────
+  const directResults = await exaGetContents(apiKey, [cleanUrl]);
+  const directProfile = directResults[0];
+  if (directProfile?.text) {
+    // Parse the direct profile text for name, headline, etc.
+    const lines = directProfile.text.split("\n").filter(Boolean);
+    const titleMatch = directProfile.title?.match(/^([^|]+)/);
+    if (titleMatch) resolvedName = titleMatch[1].trim();
+
+    // Try to extract headline from title or first lines
+    if (directProfile.title) headline = directProfile.title;
+
+    // Extract structured info from text
+    const aboutMatch = directProfile.text.match(/## About\s*([\s\S]*?)(?=##|$)/);
+    const summary = aboutMatch ? aboutMatch[1].trim().slice(0, 500) : "";
+
+    // Location from text (pattern: "City, State, Country")
+    const locMatch = directProfile.text.match(/([A-Z][a-z]+(?:,\s*[A-Z][a-z]+)*(?:,\s*United States|,\s*US|,\s*UK|,\s*Canada)?\s*\((?:US|UK|CA|AU)\))/);
+    if (locMatch) location = locMatch[1].replace(/\s*\([A-Z]+\)/, "");
+
+    // Education from text
+    const eduMatch = directProfile.text.match(/## Education\s*([\s\S]*?)(?=##|$)/);
+    if (eduMatch) {
+      const eduText = eduMatch[1];
+      const eduEntries = eduText.match(/###\s+(.+?)(?:\n|$)/g);
+      if (eduEntries) {
+        education = eduEntries.map((e) => ({
+          degree: e.replace(/^###\s+/, "").trim(),
+          institution: e.replace(/^###\s+/, "").trim(),
+          from: null,
+          to: null,
+        }));
+      }
+    }
+
+    if (directProfile.image) profileImageUrl = directProfile.image;
+    if (directProfile.url) sources.push(directProfile.url);
+
+    // Store the full text as narrative context
+    const directNarrative = directProfile.text.slice(0, 3000);
+
+    // Still do the people search for structured entity data (work history etc.)
+    const peopleResults = await exaSearch(apiKey, {
+      query: `${resolvedName} ${cleanUrl}`,
+      category: "people",
+      type: "auto",
+      numResults: 3,
+      contents: { text: { maxCharacters: 2000 } },
+    });
+
+    // Find the matching entity for structured work history
+    const exactEntity = peopleResults.find((r) => {
+      const rSlug = (r.url || "").split("/in/")[1]?.replace(/[/?#].*/g, "").replace(/\//g, "") || "";
+      return rSlug.toLowerCase() === slug.toLowerCase();
+    });
+    const entity = exactEntity?.entities?.[0] || peopleResults[0]?.entities?.[0];
+    if (entity?.properties) {
+      const props = entity.properties;
+      if (props.name) resolvedName = props.name;
+      if (props.location) location = props.location;
+      if (props.imageUrl && !profileImageUrl) profileImageUrl = props.imageUrl;
+      if (props.workHistory) {
+        workHistory = props.workHistory.map(
+          (w: { title: string; company: { name: string }; location: string | null; dates: { from: string | null; to: string | null } }) => ({
+            title: w.title,
+            company: w.company?.name || "Unknown",
+            location: w.location,
+            from: w.dates?.from,
+            to: w.dates?.to,
+          })
+        );
+      }
+      if (props.educationHistory) {
+        education = props.educationHistory.map(
+          (e: { degree: string; institution: { name: string }; dates: { from: string | null; to: string | null } }) => ({
+            degree: e.degree,
+            institution: e.institution?.name || "Unknown",
+            from: e.dates?.from,
+            to: e.dates?.to,
+          })
+        );
+      }
+    }
+
+    // Merge narratives
+    const finalNarrative = directNarrative + (summary ? `\n\nAbout: ${summary}` : "");
+
+    return {
+      name: resolvedName,
+      headline: headline || resolvedName,
+      location,
+      summary: summary || directProfile.text.slice(0, 300),
+      profileImageUrl,
+      workHistory,
+      education,
+      companies,
+      narrativeContext: finalNarrative,
+      linkedinUrl: cleanUrl,
+      sources: [...new Set(sources)],
+    };
+  }
+
+  // ── Fallback Step 1: Search-based approach ──────────
   const urlResults = await exaSearch(apiKey, {
     query: cleanUrl,
     type: "auto",
@@ -179,7 +297,7 @@ export async function researchPerson(linkedinUrl: string): Promise<PersonProfile
     contents: { text: { maxCharacters: 2000 } },
   });
 
-  // ── Step 2: People search — structured entity data ──────────
+  // ── Fallback Step 2: People search — structured entity data ──────────
   const peopleResults = await exaSearch(apiKey, {
     query: `${nameFromUrl} ${cleanUrl}`,
     category: "people",
